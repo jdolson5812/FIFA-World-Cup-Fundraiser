@@ -447,7 +447,20 @@
       <!-- Rounds injected by JS -->
     </div>
 
-    <div style="text-align:center; margin-top:8px; margin-bottom:24px;">
+    <div class="card" style="margin-top:8px;">
+      <h2>Tiebreaker</h2>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">
+        How many total corners will be taken across all Round of 16 games combined?
+        <strong style="color:var(--text)">(Finals tiebreaker only — does not count toward your score)</strong>
+      </p>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Total Corners in Round of 16</label>
+        <input type="number" id="reg-tiebreaker" placeholder="e.g. 72" min="0" max="300"
+          style="width:100%;background:#0d1f12;border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:0.95rem;">
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:16px; margin-bottom:24px;">
       <button class="btn btn-gold" onclick="submitBracket()" id="submit-btn">
         Submit My Bracket
       </button>
@@ -927,17 +940,25 @@ async function submitBracket() {
   if (!email || !email.includes('@')) { toast('Please enter a valid email', true); return; }
   if (!bracketName) { toast('Please enter a bracket name', true); return; }
 
-  // Validate all R16 picks with known teams
-  const knownR16 = MATCHES.r16.filter(m =>
-    !m.team1.startsWith('TBD') && !m.team1.startsWith('W ') &&
-    !m.team2.startsWith('TBD') && !m.team2.startsWith('W ')
-  );
-  for (const m of knownR16) {
-    if (!picks[m.id]) {
-      toast(`Please pick a winner for ${m.team1} vs ${m.team2}`, true);
-      return;
+  // Validate all picks across every round for known (non-TBD) matchups
+  for (const [round, matches] of Object.entries(MATCHES)) {
+    for (const m of matches) {
+      const isTbd1 = !m.team1 || m.team1.startsWith('TBD') || m.team1.startsWith('W ');
+      const isTbd2 = !m.team2 || m.team2.startsWith('TBD') || m.team2.startsWith('W ');
+      if (!isTbd1 && !isTbd2 && !picks[m.id]) {
+        toast(`Please pick a winner for ${m.team1} vs ${m.team2}`, true);
+        return;
+      }
     }
   }
+
+  // Validate tiebreaker
+  const tiebreakerVal = document.getElementById('reg-tiebreaker').value.trim();
+  if (!tiebreakerVal || isNaN(tiebreakerVal) || parseInt(tiebreakerVal) < 0) {
+    toast('Please enter your tiebreaker guess (total corners in Round of 16)', true);
+    return;
+  }
+  const tiebreaker = parseInt(tiebreakerVal);
 
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
@@ -947,8 +968,8 @@ async function submitBracket() {
     let participant;
 
     if (currentParticipantId) {
-      // Updating an existing bracket — patch name if changed
-      await sbPatch('participants', `id=eq.${currentParticipantId}`, { name });
+      // Updating an existing bracket — patch name and tiebreaker if changed
+      await sbPatch('participants', `id=eq.${currentParticipantId}`, { name, tiebreaker });
       participant = { id: currentParticipantId };
     } else {
       // Check if this exact (email, bracket_name) combo already exists
@@ -959,9 +980,9 @@ async function submitBracket() {
 
       if (existing.length > 0) {
         participant = existing[0];
-        await sbPatch('participants', `id=eq.${participant.id}`, { name });
+        await sbPatch('participants', `id=eq.${participant.id}`, { name, tiebreaker });
       } else {
-        await sbPost('participants', { name, email, bracket_name: bracketName });
+        await sbPost('participants', { name, email, bracket_name: bracketName, tiebreaker });
         // Re-fetch to guarantee we have the id regardless of Prefer header behaviour
         const fetched = await sbGet('participants',
           `email=eq.${encodeURIComponent(email)}&bracket_name=eq.${encodeURIComponent(bracketName)}`);
@@ -1063,6 +1084,7 @@ async function loadExistingPicks() {
     if (!p.length) return;
     currentParticipantId = p[0].id;
     if (p[0].bracket_name) document.getElementById('reg-bracket-name').value = p[0].bracket_name;
+    if (p[0].tiebreaker != null) document.getElementById('reg-tiebreaker').value = p[0].tiebreaker;
     const b = await sbGet('brackets', `participant_id=eq.${p[0].id}`);
     picks = {};
     b.forEach(row => { picks[row.match_id] = row.picked_team; });
@@ -1164,7 +1186,7 @@ async function loadLeaderboard() {
             <button class="btn btn-sm" style="background:transparent;border:1px solid var(--border);color:var(--muted);margin-top:4px;"
               onclick="toggleBracketDetail('detail-${p.id}')">View Picks ▾</button>
             <div id="detail-${p.id}" class="bracket-detail">
-              ${renderPickDetail(p.picks, resultMap)}
+              ${renderPickDetail(p.picks, resultMap, p.tiebreaker)}
             </div>
           </td>
           <td><span class="score-badge">${p.score} pts</span></td>
@@ -1181,7 +1203,7 @@ async function loadLeaderboard() {
   }
 }
 
-function renderPickDetail(myPicks, resultMap) {
+function renderPickDetail(myPicks, resultMap, tiebreaker) {
   let html = '';
   for (const [round, matches] of Object.entries(MATCHES)) {
     const { label, pts } = ROUND_LABELS[round];
@@ -1202,6 +1224,10 @@ function renderPickDetail(myPicks, resultMap) {
         </div>
       `;
     });
+  }
+  if (tiebreaker != null) {
+    html += `<div style="font-size:0.72rem;color:var(--muted);margin:8px 0 4px;font-weight:700;text-transform:uppercase">Tiebreaker</div>`;
+    html += `<div class="pick-row"><span>Total R16 Corners</span><span style="color:var(--text)">${tiebreaker}</span></div>`;
   }
   return html;
 }
@@ -1241,8 +1267,8 @@ async function loadMyBracket() {
     results.forEach(r => { resultMap[r.match_id] = r.winner; });
 
     let score = 0;
-    let html = `<div class="card"><h2>${p.name}'s Bracket</h2>`;
-    html += renderPickDetail(myPicks, resultMap);
+    let html = `<div class="card"><h2>${p.name}'s Bracket${p.bracket_name ? ` <span style="color:var(--muted);font-size:0.85rem">(${p.bracket_name})</span>` : ''}</h2>`;
+    html += renderPickDetail(myPicks, resultMap, p.tiebreaker);
 
     // Calculate score
     for (const [round, matches] of Object.entries(MATCHES)) {
@@ -1357,13 +1383,15 @@ async function loadAdminParticipants() {
     document.getElementById('admin-prize-second').textContent = `$${Math.floor(pool*0.5)}`;
 
     let html = `<table class="leaderboard-table" style="margin-bottom:8px;">
-      <thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Paid</th><th>Actions</th></tr></thead><tbody>`;
+      <thead><tr><th>Name</th><th>Email</th><th>Bracket</th><th>Tiebreaker</th><th>Joined</th><th>Paid</th><th>Actions</th></tr></thead><tbody>`;
     participants.forEach(p => {
       const date = new Date(p.created_at).toLocaleDateString();
       html += `
         <tr id="participant-row-${p.id}">
           <td>${p.name}</td>
           <td style="color:var(--muted);font-size:0.8rem">${p.email}</td>
+          <td style="color:var(--muted);font-size:0.8rem">${p.bracket_name || '—'}</td>
+          <td style="color:var(--muted);font-size:0.8rem">${p.tiebreaker != null ? p.tiebreaker : '—'}</td>
           <td style="color:var(--muted);font-size:0.8rem">${date}</td>
           <td>${p.paid?'<span class="paid-badge">Paid ✓</span>':'<span class="unpaid-badge">Unpaid</span>'}</td>
           <td>
