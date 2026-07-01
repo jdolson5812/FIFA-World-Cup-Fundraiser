@@ -612,7 +612,7 @@
       <div class="form-group" style="margin-bottom:0;">
         <label>Total Corners in Round of 16</label>
         <input type="number" id="reg-tiebreaker" placeholder="e.g. 72" min="0" max="300"
-          style="width:100%;background:#0d1f12;border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:0.95rem;">
+          style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:0.95rem;">
       </div>
     </div>
 
@@ -1013,7 +1013,7 @@ function buildBracketTree(interactive) {
       }
 
       // Match card
-      const card = buildMatchCard(m, interactive, false);
+      const card = buildMatchCard(m, interactive, !interactive);
       slotWrap.appendChild(card);
 
       // Right connector (not final round)
