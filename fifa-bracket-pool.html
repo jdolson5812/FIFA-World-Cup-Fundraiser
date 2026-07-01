@@ -1353,6 +1353,12 @@ function showReenter() {
 }
 
 function editFromMyBracket(participantId, bracketName) {
+  // Carry over the email the user typed in My Bracket so loadExistingPicks can find picks
+  const viewEmail = document.getElementById('view-email').value.trim().toLowerCase();
+  if (viewEmail) {
+    currentEmail = viewEmail;
+    localStorage.setItem('bracket_email', viewEmail);
+  }
   switchTabDirect('enter');
   showReenterById(participantId, bracketName);
   window.scrollTo({ top: 0, behavior: 'smooth' });
