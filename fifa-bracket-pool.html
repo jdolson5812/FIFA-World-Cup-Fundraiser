@@ -1002,10 +1002,10 @@ async function submitBracket() {
     }));
 
     if (bracketRows.length > 0) {
-      await sb('brackets', {
+      await sb('brackets?on_conflict=participant_id,match_id', {
         method: 'POST',
         body: JSON.stringify(bracketRows),
-        headers: { 'Prefer': 'resolution=merge-duplicates,return=representation', 'on-conflict': 'participant_id,match_id' }
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' }
       });
     }
 
