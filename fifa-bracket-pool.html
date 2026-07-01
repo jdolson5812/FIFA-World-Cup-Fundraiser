@@ -82,7 +82,7 @@
   nav button:hover:not(.active) { color: var(--text); }
 
   /* ── Main container ── */
-  .page { display: none; padding: 24px 16px; max-width: 900px; margin: 0 auto; }
+  .page { display: none; padding: 24px 16px; max-width: 1060px; margin: 0 auto; }
   .page.active { display: block; }
 
   /* ── Cards ── */
@@ -126,44 +126,149 @@
   .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* ── Bracket picker ── */
-  .round-section { margin-bottom: 28px; }
-  .round-label {
-    font-size: 0.75rem;
+  /* ── ESPN Bracket Tree ── */
+  .bracket-wrap {
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .bracket-tree {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-width: 800px;
+    width: 100%;
+  }
+  /* R16 is wider since it has 8 matches stacked; later rounds are narrower */
+  .bracket-round:nth-child(1) { flex: 2.2; }
+  .bracket-round:nth-child(2) { flex: 1.8; }
+  .bracket-round:nth-child(3) { flex: 1.8; }
+  .bracket-round:nth-child(4) { flex: 1.8; }
+  .bracket-round {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 160px;
+  }
+  .bracket-round-header {
+    text-align: center;
+    padding: 8px 6px;
+    font-size: 0.68rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     color: var(--gold);
-    margin-bottom: 10px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--gold);
+    margin-bottom: 0;
+    background: rgba(200,168,75,0.06);
+    white-space: nowrap;
   }
-  .round-label span { color: var(--muted); font-weight: 400; margin-left: 8px; }
-
-  .match-row {
+  .bracket-round-header span {
+    display: block;
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 0.62rem;
+    margin-top: 2px;
+  }
+  .bracket-slots {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    justify-content: space-around;
+    padding: 8px 0;
+  }
+  /* connector wrapper: holds the match card + the right-side line going to next round */
+  .bracket-slot-wrap {
     display: flex;
     align-items: center;
-    background: #0d1f12;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    margin-bottom: 8px;
-    overflow: hidden;
-  }
-  .team-btn {
     flex: 1;
-    padding: 12px 14px;
+    position: relative;
+  }
+  .bracket-slot-wrap.connector-top,
+  .bracket-slot-wrap.connector-bottom {
+    /* used for drawing the tree lines */
+  }
+  .bracket-match {
+    flex: 1;
+    margin: 4px 6px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: #0d1f12;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .bracket-match.locked { opacity: 0.85; }
+
+  /* Connector lines */
+  .connector-right {
+    width: 14px;
+    flex-shrink: 0;
+    align-self: stretch;
+    position: relative;
+  }
+  /* Top slot of a pair: draws top half of the vertical bar + horizontal to center */
+  .bracket-slot-wrap.pair-top .connector-right::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    bottom: 0;
+    left: 0;
+    width: 8px;
+    border-top: 2px solid var(--border);
+    border-right: 2px solid var(--border);
+  }
+  /* Bottom slot of a pair: draws bottom half of the vertical bar + horizontal to center */
+  .bracket-slot-wrap.pair-bottom .connector-right::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 50%;
+    left: 0;
+    width: 8px;
+    border-bottom: 2px solid var(--border);
+    border-right: 2px solid var(--border);
+  }
+  /* Left connector coming from previous round */
+  .connector-left {
+    width: 14px;
+    flex-shrink: 0;
+    align-self: stretch;
+    position: relative;
+  }
+  .connector-left::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    border-top: 2px solid var(--border);
+    transform: translateY(-50%);
+  }
+
+  /* Team rows inside a bracket match */
+  .team-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 9px 10px;
     background: none;
     border: none;
+    border-bottom: 1px solid rgba(45,74,50,0.4);
     color: var(--text);
     cursor: pointer;
     text-align: left;
-    font-size: 0.88rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    font-size: 0.8rem;
     transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .team-btn:hover { background: rgba(255,255,255,0.05); }
+  .team-btn:last-child { border-bottom: none; }
+  .team-btn:hover:not(.tbd) { background: rgba(255,255,255,0.05); }
   .team-btn.selected {
     background: var(--green);
     color: #fff;
@@ -174,22 +279,47 @@
     font-style: italic;
     cursor: default;
   }
-  .vs-divider {
-    padding: 0 10px;
+  /* date label at top of match card */
+  .match-date {
+    font-size: 0.62rem;
     color: var(--muted);
-    font-size: 0.75rem;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-  .flag { font-size: 1.1rem; }
-  .match-num {
-    width: 28px;
+    padding: 3px 8px;
+    background: rgba(0,0,0,0.25);
+    border-bottom: 1px solid rgba(45,74,50,0.3);
     text-align: center;
-    font-size: 0.7rem;
-    color: var(--muted);
-    padding: 0 4px;
-    flex-shrink: 0;
   }
+  .flag { font-size: 1rem; flex-shrink: 0; }
+
+  /* For the Final column - center the single match vertically */
+  .bracket-round.final-round .bracket-slots {
+    justify-content: center;
+  }
+  /* Champion crown below the final */
+  .champion-display {
+    text-align: center;
+    margin-top: 8px;
+    padding: 10px;
+    background: linear-gradient(135deg, rgba(200,168,75,0.18), rgba(200,168,75,0.06));
+    border: 1px solid var(--gold);
+    border-radius: 8px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    animation: pulse-gold 2s ease-in-out infinite;
+  }
+  .champion-display .champion-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--gold);
+    display: block;
+    margin-top: 3px;
+  }
+
+  /* Read-only pick display (My Bracket / leaderboard view) */
+  .team-btn.pick-correct { background: rgba(26,122,60,0.25); color: #5dba7d; font-weight: 700; }
+  .team-btn.pick-wrong   { background: rgba(192,57,43,0.2);  color: #e07060; }
+  .team-btn.pick-pending { background: rgba(200,168,75,0.12); color: var(--gold); font-weight: 600; }
 
   /* ── Locked state ── */
   .locked-banner {
@@ -726,6 +856,15 @@ let currentParticipantId = null;  // tracks which bracket row we're editing
 let isLocked = new Date() >= BRACKET_LOCK_DATE;
 let adminAuthed = false;
 
+// Visual display order for bracket tree — r16 reordered so pairs align with QF slots
+// r16_1+r16_2 → qf_1 (top), r16_5+r16_6 → qf_2, r16_3+r16_4 → qf_3, r16_7+r16_8 → qf_4 (bottom)
+const DISPLAY_ORDER = {
+  r16:   ['r16_1','r16_2','r16_5','r16_6','r16_3','r16_4','r16_7','r16_8'],
+  qf:    ['qf_1','qf_2','qf_3','qf_4'],
+  sf:    ['sf_1','sf_2'],
+  final: ['final_1'],
+};
+
 // ══════════════════════════════════════════════════════
 // TAB SWITCHING
 // ══════════════════════════════════════════════════════
@@ -741,8 +880,20 @@ function switchTab(tab) {
 }
 
 // ══════════════════════════════════════════════════════
-// BRACKET PICKER RENDER
+// BRACKET PICKER RENDER  (ESPN left→right tree)
 // ══════════════════════════════════════════════════════
+
+// Bracket structure: which R16 pairs feed which QF, etc.
+// Used to pair slots for connector-line CSS classes
+const ROUND_PAIRS = {
+  r16:   [[0,1],[2,3],[4,5],[6,7]],  // 4 pairs → 4 QF slots
+  qf:    [[0,1],[2,3]],               // 2 pairs → 2 SF slots
+  sf:    [[0,1]],                      // 1 pair  → 1 Final slot
+  final: [],
+};
+// Order in which rounds appear left→right
+const ROUND_ORDER = ['r16','qf','sf','final'];
+
 function renderBracketPicker() {
   const container = document.getElementById('bracket-picker');
   container.innerHTML = '';
@@ -750,52 +901,171 @@ function renderBracketPicker() {
   if (isLocked) {
     container.innerHTML = '<div class="locked-banner">🔒 Brackets are locked — the tournament has begun!</div>';
     document.getElementById('submit-btn').disabled = true;
+    // Still show the bracket tree in read-only mode
+    const wrap = document.createElement('div');
+    wrap.className = 'bracket-wrap';
+    wrap.appendChild(buildBracketTree(false));
+    container.appendChild(wrap);
     return;
   }
 
-  for (const [round, matches] of Object.entries(MATCHES)) {
-    const { label, pts } = ROUND_LABELS[round];
-    const section = document.createElement('div');
-    section.className = 'card round-section';
-    section.innerHTML = `<div class="round-label">${label} <span>${pts} pt${pts>1?'s':''} per correct pick</span></div>`;
-
-    matches.forEach(m => {
-      section.appendChild(buildMatchRow(m));
-    });
-
-    container.appendChild(section);
-  }
+  const wrap = document.createElement('div');
+  wrap.className = 'bracket-wrap';
+  wrap.appendChild(buildBracketTree(true));
+  container.appendChild(wrap);
 
   renderChampionBanner();
 }
 
-function buildMatchRow(m) {
+function buildBracketTree(interactive) {
+  const tree = document.createElement('div');
+  tree.className = 'bracket-tree';
+
+  ROUND_ORDER.forEach((round, roundIdx) => {
+    // Use display order to ensure visual alignment of bracket halves
+    const matchMap = allMatches();
+    const matches = DISPLAY_ORDER[round].map(id => matchMap[id]);
+    const { label, pts } = ROUND_LABELS[round];
+    const isLast = round === 'final';
+    const isFirst = round === 'r16';
+    const pairs = ROUND_PAIRS[round]; // pairs for connector lines
+
+    const col = document.createElement('div');
+    col.className = `bracket-round${isLast ? ' final-round' : ''}`;
+
+    // Column header
+    const hdr = document.createElement('div');
+    hdr.className = 'bracket-round-header';
+    hdr.innerHTML = `${label}<span>${pts} pt${pts>1?'s':''} each</span>`;
+    col.appendChild(hdr);
+
+    // Slots container
+    const slots = document.createElement('div');
+    slots.className = 'bracket-slots';
+
+    // Build a pairIndex map: which pair does each match belong to, and is it top or bottom?
+    const pairMap = {}; // matchIndex → { pairIdx, isTop }
+    pairs.forEach((pair, pairIdx) => {
+      pairMap[pair[0]] = { pairIdx, isTop: true };
+      pairMap[pair[1]] = { pairIdx, isTop: false };
+    });
+
+    matches.forEach((m, i) => {
+      const slotWrap = document.createElement('div');
+      slotWrap.className = 'bracket-slot-wrap';
+
+      // Add connector classes for non-final rounds
+      if (!isLast && pairMap[i] !== undefined) {
+        slotWrap.classList.add(pairMap[i].isTop ? 'pair-top' : 'pair-bottom');
+      }
+
+      // Left connector (not first round)
+      if (!isFirst) {
+        const cl = document.createElement('div');
+        cl.className = 'connector-left';
+        slotWrap.appendChild(cl);
+      }
+
+      // Match card
+      const card = buildMatchCard(m, interactive, false);
+      slotWrap.appendChild(card);
+
+      // Right connector (not final round)
+      if (!isLast) {
+        const cr = document.createElement('div');
+        cr.className = 'connector-right';
+        slotWrap.appendChild(cr);
+      }
+
+      slots.appendChild(slotWrap);
+    });
+
+    col.appendChild(slots);
+
+    // Champion display below the final column
+    if (isLast) {
+      const champDiv = document.createElement('div');
+      champDiv.id = 'champion-banner';
+      champDiv.style.display = 'none';
+      champDiv.className = 'champion-display';
+      champDiv.innerHTML = `World Cup Champion<span class="champion-name"></span>`;
+      col.appendChild(champDiv);
+    }
+
+    tree.appendChild(col);
+  });
+
+  return tree;
+}
+
+function buildMatchCard(m, interactive, readOnly, picksObj, resultMap) {
+  // picksObj / resultMap used for read-only display (My Bracket, leaderboard)
   const isTbd1 = !m.team1 || m.team1.startsWith('TBD') || m.team1.startsWith('W ');
   const isTbd2 = !m.team2 || m.team2.startsWith('TBD') || m.team2.startsWith('W ');
-  const row = document.createElement('div');
-  row.className = 'match-row';
-  row.id = `match-row-${m.id}`;
-
   const f1 = FLAGS[m.team1] || m.flag1 || '🏳️';
   const f2 = FLAGS[m.team2] || m.flag2 || '🏳️';
   const disp1 = isTbd1 ? (m.team1 || 'TBD') : m.team1;
   const disp2 = isTbd2 ? (m.team2 || 'TBD') : m.team2;
 
-  row.innerHTML = `
-    <span class="match-num">${m.date}</span>
-    <button class="team-btn ${isTbd1?'tbd':''} ${picks[m.id]===m.team1&&!isTbd1?'selected':''}"
-      onclick="${isTbd1?'':` pickTeam('${m.id}', 1)`}"
-      id="btn-${m.id}-1" data-match="${m.id}" data-slot="1">
-      <span class="flag">${f1}</span> ${disp1}
-    </button>
-    <span class="vs-divider">vs</span>
-    <button class="team-btn ${isTbd2?'tbd':''} ${picks[m.id]===m.team2&&!isTbd2?'selected':''}"
-      onclick="${isTbd2?'':` pickTeam('${m.id}', 2)`}"
-      id="btn-${m.id}-2" data-match="${m.id}" data-slot="2">
-      <span class="flag">${f2}</span> ${disp2}
-    </button>
-  `;
-  return row;
+  const card = document.createElement('div');
+  card.className = 'bracket-match' + (isLocked && !readOnly ? ' locked' : '');
+  card.id = `match-row-${m.id}`;
+
+  // Date label
+  card.innerHTML = `<div class="match-date">${m.date}</div>`;
+
+  // Build team button class for interactive or read-only
+  function teamClass(team, isTbd, slot) {
+    let cls = 'team-btn';
+    if (isTbd) { cls += ' tbd'; return cls; }
+    if (readOnly && picksObj) {
+      const picked = picksObj[m.id] === team;
+      if (!picked) return cls;
+      const result = resultMap && resultMap[m.id];
+      if (!result) { cls += ' pick-pending'; }
+      else if (result === team) { cls += ' pick-correct'; }
+      else { cls += ' pick-wrong'; }
+    } else {
+      // Interactive
+      const myPicks = interactive ? picks : {};
+      if (myPicks[m.id] === team) cls += ' selected';
+    }
+    return cls;
+  }
+
+  function statusIcon(team, isTbd) {
+    if (!readOnly || !picksObj || isTbd) return '';
+    const picked = picksObj[m.id] === team;
+    if (!picked) return '';
+    const result = resultMap && resultMap[m.id];
+    if (!result) return '';
+    return result === team ? ' ✓' : ' ✗';
+  }
+
+  const clickFn1 = (interactive && !isTbd1) ? () => pickTeam(m.id, 1) : null;
+  const clickFn2 = (interactive && !isTbd2) ? () => pickTeam(m.id, 2) : null;
+
+  const btn1 = document.createElement('button');
+  btn1.className = teamClass(m.team1, isTbd1, 1);
+  btn1.id = `btn-${m.id}-1`;
+  btn1.onclick = clickFn1;
+  btn1.innerHTML = `<span class="flag">${f1}</span><span style="overflow:hidden;text-overflow:ellipsis">${disp1}${statusIcon(m.team1, isTbd1)}</span>`;
+
+  const btn2 = document.createElement('button');
+  btn2.className = teamClass(m.team2, isTbd2, 2);
+  btn2.id = `btn-${m.id}-2`;
+  btn2.onclick = clickFn2;
+  btn2.innerHTML = `<span class="flag">${f2}</span><span style="overflow:hidden;text-overflow:ellipsis">${disp2}${statusIcon(m.team2, isTbd2)}</span>`;
+
+  card.appendChild(btn1);
+  card.appendChild(btn2);
+
+  return card;
+}
+
+// Legacy shim — pickTeam still calls replaceWith on the card element
+function buildMatchRow(m) {
+  return buildMatchCard(m, true, false);
 }
 
 function pickTeam(matchId, slot) {
@@ -880,33 +1150,14 @@ function clearDownstream(matchId, clearedTeam) {
 }
 
 function renderChampionBanner() {
-  let banner = document.getElementById('champion-banner');
+  const banner = document.getElementById('champion-banner');
+  if (!banner) return;
   const champion = picks['final_1'];
   if (champion) {
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'champion-banner';
-      banner.style.cssText = `
-        background: linear-gradient(135deg, rgba(200,168,75,0.2), rgba(200,168,75,0.08));
-        border: 2px solid var(--gold);
-        border-radius: 12px;
-        padding: 18px;
-        text-align: center;
-        margin-bottom: 16px;
-        animation: pulse-gold 2s ease-in-out infinite;
-      `;
-      // Insert after the bracket picker (before the submit button area)
-      const submitArea = document.querySelector('#enter-form-section > div[style]');
-      const picker = document.getElementById('bracket-picker');
-      picker.parentNode.insertBefore(banner, submitArea || picker.nextSibling);
-    }
-    banner.innerHTML = `
-      <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:6px">Your World Cup Champion</div>
-      <div style="font-size:2rem;margin-bottom:4px">${FLAGS[champion]||'🏆'}</div>
-      <div style="font-size:1.4rem;font-weight:800;color:var(--gold)">${champion}</div>
-    `;
-  } else if (banner) {
-    banner.remove();
+    banner.style.display = 'block';
+    banner.querySelector('.champion-name').textContent = (FLAGS[champion] || '🏆') + ' ' + champion;
+  } else {
+    banner.style.display = 'none';
   }
 }
 
@@ -1260,32 +1511,93 @@ async function loadLeaderboard() {
 }
 
 function renderPickDetail(myPicks, resultMap, tiebreaker) {
-  let html = '';
-  for (const [round, matches] of Object.entries(MATCHES)) {
+  // Build an ESPN-style read-only bracket tree
+  const wrap = document.createElement('div');
+  wrap.className = 'bracket-wrap';
+  wrap.style.marginTop = '12px';
+
+  // Snapshot current MATCHES and restore after (pick detail uses its own state)
+  const origMatches = JSON.parse(JSON.stringify(MATCHES));
+
+  // Reset MATCHES to placeholders
+  MATCHES.qf.forEach((m,i) => { m.team1=`W R16-${i*2+1}`;m.flag1='🏳️';m.team2=`W R16-${i*2+2}`;m.flag2='🏳️'; });
+  MATCHES.sf.forEach((m,i) => { m.team1=`W QF-${i*2+1}`;m.flag1='🏳️';m.team2=`W QF-${i*2+2}`;m.flag2='🏳️'; });
+  MATCHES.final[0].team1='W SF-1';MATCHES.final[0].flag1='🏳️';
+  MATCHES.final[0].team2='W SF-2';MATCHES.final[0].flag2='🏳️';
+
+  // Replay picks to populate team names in later rounds
+  replayCascade(myPicks);
+
+  const tree = document.createElement('div');
+  tree.className = 'bracket-tree';
+
+  ROUND_ORDER.forEach((round, roundIdx) => {
+    const matchMap2 = allMatches();
+    const matches = DISPLAY_ORDER[round].map(id => matchMap2[id]);
     const { label, pts } = ROUND_LABELS[round];
-    html += `<div style="font-size:0.72rem;color:var(--muted);margin:8px 0 4px;font-weight:700;text-transform:uppercase">${label}</div>`;
-    matches.forEach(m => {
-      const pick = myPicks[m.id];
-      const result = resultMap[m.id];
-      let status = '';
-      if (pick && result) {
-        status = pick === result
-          ? `<span class="correct">✓ +${pts}pt${pts>1?'s':''}</span>`
-          : `<span class="wrong">✗</span>`;
-      }
-      html += `
-        <div class="pick-row">
-          <span>${m.team1} vs ${m.team2}</span>
-          <span style="color:var(--text)">${pick ? (FLAGS[pick]||'🏳️') + ' ' + pick : '<em style="color:var(--muted)">No pick</em>'} ${status}</span>
-        </div>
-      `;
+    const isLast = round === 'final';
+    const isFirst = round === 'r16';
+    const pairs = ROUND_PAIRS[round];
+
+    const col = document.createElement('div');
+    col.className = `bracket-round${isLast ? ' final-round' : ''}`;
+
+    const hdr = document.createElement('div');
+    hdr.className = 'bracket-round-header';
+    hdr.innerHTML = `${label}<span>${pts} pt${pts>1?'s':''} each</span>`;
+    col.appendChild(hdr);
+
+    const slots = document.createElement('div');
+    slots.className = 'bracket-slots';
+
+    const pairMap = {};
+    pairs.forEach((pair, pairIdx) => {
+      pairMap[pair[0]] = { pairIdx, isTop: true };
+      pairMap[pair[1]] = { pairIdx, isTop: false };
     });
-  }
+
+    matches.forEach((m, i) => {
+      const slotWrap = document.createElement('div');
+      slotWrap.className = 'bracket-slot-wrap';
+      if (!isLast && pairMap[i] !== undefined) {
+        slotWrap.classList.add(pairMap[i].isTop ? 'pair-top' : 'pair-bottom');
+      }
+      if (!isFirst) {
+        const cl = document.createElement('div'); cl.className = 'connector-left'; slotWrap.appendChild(cl);
+      }
+      const cardClone = buildMatchCard(m, false, true, myPicks, resultMap);
+      cardClone.id = `detail-card-${m.id}`;
+      slotWrap.appendChild(cardClone);
+      if (!isLast) {
+        const cr = document.createElement('div'); cr.className = 'connector-right'; slotWrap.appendChild(cr);
+      }
+      slots.appendChild(slotWrap);
+    });
+    col.appendChild(slots);
+    tree.appendChild(col);
+  });
+
+  // Restore MATCHES
+  Object.keys(origMatches).forEach(round => {
+    MATCHES[round].forEach((m, i) => {
+      m.team1 = origMatches[round][i].team1;
+      m.flag1 = origMatches[round][i].flag1;
+      m.team2 = origMatches[round][i].team2;
+      m.flag2 = origMatches[round][i].flag2;
+    });
+  });
+
+  wrap.appendChild(tree);
+
+  // Tiebreaker line
   if (tiebreaker != null) {
-    html += `<div style="font-size:0.72rem;color:var(--muted);margin:8px 0 4px;font-weight:700;text-transform:uppercase">Tiebreaker</div>`;
-    html += `<div class="pick-row"><span>Total R16 Corners</span><span style="color:var(--text)">${tiebreaker}</span></div>`;
+    const tb = document.createElement('div');
+    tb.style.cssText = 'margin-top:10px;font-size:0.78rem;color:var(--muted);text-align:right;padding-right:8px;';
+    tb.innerHTML = `Tiebreaker (R16 corners): <strong style="color:var(--text)">${tiebreaker}</strong>`;
+    wrap.appendChild(tb);
   }
-  return html;
+
+  return wrap.outerHTML;
 }
 
 function toggleBracketDetail(id) {
@@ -1593,36 +1905,89 @@ function renderAdminBracketPicker() {
   if (!container) return;
   container.innerHTML = '';
 
-  for (const [round, matches] of Object.entries(MATCHES)) {
-    const { label, pts } = ROUND_LABELS[round];
-    const section = document.createElement('div');
-    section.style.marginBottom = '20px';
-    section.innerHTML = `<div class="round-label">${label} <span>${pts} pt${pts>1?'s':''} per correct pick</span></div>`;
+  const wrap = document.createElement('div');
+  wrap.className = 'bracket-wrap';
 
-    matches.forEach(m => {
-      const isTbd1 = !m.team1 || m.team1.startsWith('TBD') || m.team1.startsWith('W ');
-      const isTbd2 = !m.team2 || m.team2.startsWith('TBD') || m.team2.startsWith('W ');
-      const f1 = FLAGS[m.team1] || m.flag1 || '🏳️';
-      const f2 = FLAGS[m.team2] || m.flag2 || '🏳️';
-      const row = document.createElement('div');
-      row.className = 'match-row';
-      row.id = `admin-match-row-${m.id}`;
-      row.innerHTML = `
-        <span class="match-num">${m.date}</span>
-        <button class="team-btn ${isTbd1?'tbd':''} ${adminEditPicks_picks[m.id]===m.team1&&!isTbd1?'selected':''}"
-          onclick="${isTbd1?'':` adminPickTeam('${m.id}', 1)`}" id="admin-btn-${m.id}-1">
-          <span class="flag">${f1}</span> ${isTbd1?(m.team1||'TBD'):m.team1}
-        </button>
-        <span class="vs-divider">vs</span>
-        <button class="team-btn ${isTbd2?'tbd':''} ${adminEditPicks_picks[m.id]===m.team2&&!isTbd2?'selected':''}"
-          onclick="${isTbd2?'':` adminPickTeam('${m.id}', 2)`}" id="admin-btn-${m.id}-2">
-          <span class="flag">${f2}</span> ${isTbd2?(m.team2||'TBD'):m.team2}
-        </button>
-      `;
-      section.appendChild(row);
+  const tree = document.createElement('div');
+  tree.className = 'bracket-tree';
+
+  ROUND_ORDER.forEach((round) => {
+    const matchMap3 = allMatches();
+    const matches = DISPLAY_ORDER[round].map(id => matchMap3[id]);
+    const { label, pts } = ROUND_LABELS[round];
+    const isLast = round === 'final';
+    const isFirst = round === 'r16';
+    const pairs = ROUND_PAIRS[round];
+
+    const col = document.createElement('div');
+    col.className = `bracket-round${isLast ? ' final-round' : ''}`;
+
+    const hdr = document.createElement('div');
+    hdr.className = 'bracket-round-header';
+    hdr.innerHTML = `${label}<span>${pts} pt${pts>1?'s':''} each</span>`;
+    col.appendChild(hdr);
+
+    const slots = document.createElement('div');
+    slots.className = 'bracket-slots';
+
+    const pairMap = {};
+    pairs.forEach((pair, pairIdx) => {
+      pairMap[pair[0]] = { pairIdx, isTop: true };
+      pairMap[pair[1]] = { pairIdx, isTop: false };
     });
-    container.appendChild(section);
-  }
+
+    matches.forEach((m, i) => {
+      const slotWrap = document.createElement('div');
+      slotWrap.className = 'bracket-slot-wrap';
+      if (!isLast && pairMap[i] !== undefined) {
+        slotWrap.classList.add(pairMap[i].isTop ? 'pair-top' : 'pair-bottom');
+      }
+      if (!isFirst) {
+        const cl = document.createElement('div'); cl.className = 'connector-left'; slotWrap.appendChild(cl);
+      }
+      const card = buildAdminMatchCard(m);
+      slotWrap.appendChild(card);
+      if (!isLast) {
+        const cr = document.createElement('div'); cr.className = 'connector-right'; slotWrap.appendChild(cr);
+      }
+      slots.appendChild(slotWrap);
+    });
+    col.appendChild(slots);
+    tree.appendChild(col);
+  });
+
+  wrap.appendChild(tree);
+  container.appendChild(wrap);
+}
+
+function buildAdminMatchCard(m) {
+  const isTbd1 = !m.team1 || m.team1.startsWith('TBD') || m.team1.startsWith('W ');
+  const isTbd2 = !m.team2 || m.team2.startsWith('TBD') || m.team2.startsWith('W ');
+  const f1 = FLAGS[m.team1] || m.flag1 || '🏳️';
+  const f2 = FLAGS[m.team2] || m.flag2 || '🏳️';
+  const disp1 = isTbd1 ? (m.team1 || 'TBD') : m.team1;
+  const disp2 = isTbd2 ? (m.team2 || 'TBD') : m.team2;
+
+  const card = document.createElement('div');
+  card.className = 'bracket-match';
+  card.id = `admin-match-row-${m.id}`;
+  card.innerHTML = `<div class="match-date">${m.date}</div>`;
+
+  const btn1 = document.createElement('button');
+  btn1.className = `team-btn${isTbd1?' tbd':''}${(!isTbd1 && adminEditPicks_picks[m.id]===m.team1)?' selected':''}`;
+  btn1.id = `admin-btn-${m.id}-1`;
+  btn1.onclick = isTbd1 ? null : () => adminPickTeam(m.id, 1);
+  btn1.innerHTML = `<span class="flag">${f1}</span><span style="overflow:hidden;text-overflow:ellipsis">${disp1}</span>`;
+
+  const btn2 = document.createElement('button');
+  btn2.className = `team-btn${isTbd2?' tbd':''}${(!isTbd2 && adminEditPicks_picks[m.id]===m.team2)?' selected':''}`;
+  btn2.id = `admin-btn-${m.id}-2`;
+  btn2.onclick = isTbd2 ? null : () => adminPickTeam(m.id, 2);
+  btn2.innerHTML = `<span class="flag">${f2}</span><span style="overflow:hidden;text-overflow:ellipsis">${disp2}</span>`;
+
+  card.appendChild(btn1);
+  card.appendChild(btn2);
+  return card;
 }
 
 function adminPickTeam(matchId, slot) {
@@ -1652,26 +2017,8 @@ function adminPropagate(matchId, slot, team, flag) {
   if (slot === 1) { m.team1 = team; m.flag1 = flag; }
   else            { m.team2 = team; m.flag2 = flag; }
 
-  // Re-render row inside modal
   const existing = document.getElementById(`admin-match-row-${matchId}`);
-  if (existing) {
-    const isTbd1 = !m.team1 || m.team1.startsWith('TBD') || m.team1.startsWith('W ');
-    const isTbd2 = !m.team2 || m.team2.startsWith('TBD') || m.team2.startsWith('W ');
-    const f1 = FLAGS[m.team1] || m.flag1 || '🏳️';
-    const f2 = FLAGS[m.team2] || m.flag2 || '🏳️';
-    existing.innerHTML = `
-      <span class="match-num">${m.date}</span>
-      <button class="team-btn ${isTbd1?'tbd':''} ${adminEditPicks_picks[matchId]===m.team1&&!isTbd1?'selected':''}"
-        onclick="${isTbd1?'':` adminPickTeam('${matchId}', 1)`}" id="admin-btn-${matchId}-1">
-        <span class="flag">${f1}</span> ${isTbd1?(m.team1||'TBD'):m.team1}
-      </button>
-      <span class="vs-divider">vs</span>
-      <button class="team-btn ${isTbd2?'tbd':''} ${adminEditPicks_picks[matchId]===m.team2&&!isTbd2?'selected':''}"
-        onclick="${isTbd2?'':` adminPickTeam('${matchId}', 2)`}" id="admin-btn-${matchId}-2">
-        <span class="flag">${f2}</span> ${isTbd2?(m.team2||'TBD'):m.team2}
-      </button>
-    `;
-  }
+  if (existing) existing.replaceWith(buildAdminMatchCard(m));
 
   if (adminEditPicks_picks[matchId]) {
     const pick = adminEditPicks_picks[matchId];
@@ -1699,25 +2046,7 @@ function adminClearDownstream(matchId, clearedTeam) {
     adminClearDownstream(feed.match, clearedTeam);
   }
   const existing = document.getElementById(`admin-match-row-${feed.match}`);
-  if (existing) {
-    const m = nextMatch;
-    const isTbd1 = !m.team1 || m.team1.startsWith('TBD') || m.team1.startsWith('W ');
-    const isTbd2 = !m.team2 || m.team2.startsWith('TBD') || m.team2.startsWith('W ');
-    const f1 = FLAGS[m.team1] || m.flag1 || '🏳️';
-    const f2 = FLAGS[m.team2] || m.flag2 || '🏳️';
-    existing.innerHTML = `
-      <span class="match-num">${m.date}</span>
-      <button class="team-btn ${isTbd1?'tbd':''} ${adminEditPicks_picks[m.id]===m.team1&&!isTbd1?'selected':''}"
-        onclick="${isTbd1?'':` adminPickTeam('${m.id}', 1)`}" id="admin-btn-${m.id}-1">
-        <span class="flag">${f1}</span> ${isTbd1?(m.team1||'TBD'):m.team1}
-      </button>
-      <span class="vs-divider">vs</span>
-      <button class="team-btn ${isTbd2?'tbd':''} ${adminEditPicks_picks[m.id]===m.team2&&!isTbd2?'selected':''}"
-        onclick="${isTbd2?'':` adminPickTeam('${m.id}', 2)`}" id="admin-btn-${m.id}-2">
-        <span class="flag">${f2}</span> ${isTbd2?(m.team2||'TBD'):m.team2}
-      </button>
-    `;
-  }
+  if (existing) existing.replaceWith(buildAdminMatchCard(nextMatch));
 }
 
 async function adminSavePicks() {
