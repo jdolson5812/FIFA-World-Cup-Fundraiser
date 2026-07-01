@@ -1109,6 +1109,26 @@ function startNewBracket() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// Replay cascade for a picks object so downstream match slots show real team names.
+// Must be called after picks are loaded and before rendering.
+function replayCascade(picksObj) {
+  // Process rounds in order so each feeds the next
+  const roundOrder = ['r16', 'qf', 'sf', 'final'];
+  for (const round of roundOrder) {
+    for (const m of MATCHES[round]) {
+      const picked = picksObj[m.id];
+      if (!picked) continue;
+      const feed = FEEDS_INTO[m.id];
+      if (!feed) continue;
+      const matchMap = allMatches();
+      const next = matchMap[feed.match];
+      if (!next) continue;
+      if (feed.slot === 1) { next.team1 = picked; next.flag1 = FLAGS[picked] || '🏳️'; }
+      else                 { next.team2 = picked; next.flag2 = FLAGS[picked] || '🏳️'; }
+    }
+  }
+}
+
 async function loadExistingPicks() {
   if (!currentEmail) return;
   try {
@@ -1123,6 +1143,7 @@ async function loadExistingPicks() {
     const b = await sbGet('brackets', `participant_id=eq.${p[0].id}`);
     picks = {};
     b.forEach(row => { picks[row.match_id] = row.picked_team; });
+    replayCascade(picks);
     renderBracketPicker();
   } catch(e) {}
 }
@@ -1561,6 +1582,7 @@ async function adminEditPicks(id, name, bracketName) {
   try {
     const rows = await sbGet('brackets', `participant_id=eq.${id}`);
     rows.forEach(r => { adminEditPicks_picks[r.match_id] = r.picked_team; });
+    replayCascade(adminEditPicks_picks);
   } catch(e) {}
 
   renderAdminBracketPicker();
