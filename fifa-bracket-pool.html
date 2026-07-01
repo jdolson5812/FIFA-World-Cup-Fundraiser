@@ -1053,7 +1053,7 @@ function buildMatchCard(m, interactive, readOnly, picksObj, resultMap) {
 
   const card = document.createElement('div');
   card.className = 'bracket-match' + (isLocked && !readOnly ? ' locked' : '');
-  card.id = `match-row-${m.id}`;
+  if (!readOnly) card.id = `match-row-${m.id}`;
 
   // Date label
   card.innerHTML = `<div class="match-date">${m.date}</div>`;
@@ -1091,13 +1091,13 @@ function buildMatchCard(m, interactive, readOnly, picksObj, resultMap) {
 
   const btn1 = document.createElement('button');
   btn1.className = teamClass(m.team1, isTbd1, 1);
-  btn1.id = `btn-${m.id}-1`;
+  if (!readOnly) btn1.id = `btn-${m.id}-1`;
   btn1.onclick = clickFn1;
   btn1.innerHTML = `${isTbd1 ? '<span class="flag">🏳️</span>' : flagImg(m.team1)}<span style="overflow:hidden;text-overflow:ellipsis">${disp1}${statusIcon(m.team1, isTbd1)}</span>`;
 
   const btn2 = document.createElement('button');
   btn2.className = teamClass(m.team2, isTbd2, 2);
-  btn2.id = `btn-${m.id}-2`;
+  if (!readOnly) btn2.id = `btn-${m.id}-2`;
   btn2.onclick = clickFn2;
   btn2.innerHTML = `${isTbd2 ? '<span class="flag">🏳️</span>' : flagImg(m.team2)}<span style="overflow:hidden;text-overflow:ellipsis">${disp2}${statusIcon(m.team2, isTbd2)}</span>`;
 
