@@ -1451,6 +1451,10 @@ async function loadAdminParticipants() {
                 onclick="confirmClearPicks('${p.id}', '${p.name.replace(/'/g,"\\'")}')">
                 Clear Picks
               </button>
+              <button class="btn btn-sm" style="background:#2a1a4a;color:#b07ad4;border:1px solid #5a2a8a;"
+                onclick="adminEditPicks('${p.id}', '${p.name.replace(/'/g,"\\'")}', '${(p.bracket_name||'').replace(/'/g,"\\'")}')">
+                Edit Picks
+              </button>
               <button class="btn btn-sm" style="background:rgba(192,57,43,0.2);color:#e07060;border:1px solid #8e2018;"
                 onclick="confirmRemoveParticipant('${p.id}', '${p.name.replace(/'/g,"\\'")}')">
                 Remove
@@ -1515,6 +1519,202 @@ async function removeParticipant(id, name) {
     loadAdminParticipants();
   } catch(e) {
     toast('Error: ' + e.message, true);
+  }
+}
+
+// ── Admin Edit Picks Modal ──────────────────────────────
+let adminEditPicks_participantId = null;
+let adminEditPicks_picks = {};
+
+async function adminEditPicks(id, name, bracketName) {
+  adminEditPicks_participantId = id;
+  adminEditPicks_picks = {};
+
+  // Reset MATCHES to placeholders before loading
+  MATCHES.qf.forEach((m,i) => { m.team1=`W R16-${i*2+1}`;m.flag1='🏳️';m.team2=`W R16-${i*2+2}`;m.flag2='🏳️'; });
+  MATCHES.sf.forEach((m,i) => { m.team1=`W QF-${i*2+1}`;m.flag1='🏳️';m.team2=`W QF-${i*2+2}`;m.flag2='🏳️'; });
+  MATCHES.final[0].team1='W SF-1';MATCHES.final[0].flag1='🏳️';
+  MATCHES.final[0].team2='W SF-2';MATCHES.final[0].flag2='🏳️';
+
+  // Build modal
+  document.getElementById('confirm-modal')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'confirm-modal';
+  overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;`;
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;max-width:660px;width:100%;margin:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-size:1rem;font-weight:700;color:var(--gold);">
+          ✏️ Edit: ${name}${bracketName ? ` <span style="color:var(--muted);font-weight:400;font-size:0.85rem">(${bracketName})</span>` : ''}
+        </div>
+        <button class="btn btn-sm" style="background:var(--border);color:var(--text);" onclick="document.getElementById('confirm-modal').remove()">✕ Close</button>
+      </div>
+      <div id="admin-bracket-picker"></div>
+      <div style="text-align:center;margin-top:16px;">
+        <button class="btn btn-gold" onclick="adminSavePicks()">Save Picks</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Load existing picks
+  try {
+    const rows = await sbGet('brackets', `participant_id=eq.${id}`);
+    rows.forEach(r => { adminEditPicks_picks[r.match_id] = r.picked_team; });
+  } catch(e) {}
+
+  renderAdminBracketPicker();
+}
+
+function renderAdminBracketPicker() {
+  const container = document.getElementById('admin-bracket-picker');
+  if (!container) return;
+  container.innerHTML = '';
+
+  for (const [round, matches] of Object.entries(MATCHES)) {
+    const { label, pts } = ROUND_LABELS[round];
+    const section = document.createElement('div');
+    section.style.marginBottom = '20px';
+    section.innerHTML = `<div class="round-label">${label} <span>${pts} pt${pts>1?'s':''} per correct pick</span></div>`;
+
+    matches.forEach(m => {
+      const isTbd1 = !m.team1 || m.team1.startsWith('TBD') || m.team1.startsWith('W ');
+      const isTbd2 = !m.team2 || m.team2.startsWith('TBD') || m.team2.startsWith('W ');
+      const f1 = FLAGS[m.team1] || m.flag1 || '🏳️';
+      const f2 = FLAGS[m.team2] || m.flag2 || '🏳️';
+      const row = document.createElement('div');
+      row.className = 'match-row';
+      row.id = `admin-match-row-${m.id}`;
+      row.innerHTML = `
+        <span class="match-num">${m.date}</span>
+        <button class="team-btn ${isTbd1?'tbd':''} ${adminEditPicks_picks[m.id]===m.team1&&!isTbd1?'selected':''}"
+          onclick="${isTbd1?'':` adminPickTeam('${m.id}', 1)`}" id="admin-btn-${m.id}-1">
+          <span class="flag">${f1}</span> ${isTbd1?(m.team1||'TBD'):m.team1}
+        </button>
+        <span class="vs-divider">vs</span>
+        <button class="team-btn ${isTbd2?'tbd':''} ${adminEditPicks_picks[m.id]===m.team2&&!isTbd2?'selected':''}"
+          onclick="${isTbd2?'':` adminPickTeam('${m.id}', 2)`}" id="admin-btn-${m.id}-2">
+          <span class="flag">${f2}</span> ${isTbd2?(m.team2||'TBD'):m.team2}
+        </button>
+      `;
+      section.appendChild(row);
+    });
+    container.appendChild(section);
+  }
+}
+
+function adminPickTeam(matchId, slot) {
+  const matchMap = allMatches();
+  const m = matchMap[matchId];
+  const team = slot === 1 ? m.team1 : m.team2;
+  if (!team || team.startsWith('TBD') || team.startsWith('W ')) return;
+
+  const prevPick = adminEditPicks_picks[matchId];
+  adminEditPicks_picks[matchId] = team;
+
+  const btn1 = document.getElementById(`admin-btn-${matchId}-1`);
+  const btn2 = document.getElementById(`admin-btn-${matchId}-2`);
+  if (btn1) btn1.classList.toggle('selected', slot === 1);
+  if (btn2) btn2.classList.toggle('selected', slot === 2);
+
+  if (prevPick && prevPick !== team) adminClearDownstream(matchId, prevPick);
+
+  const feed = FEEDS_INTO[matchId];
+  if (feed) adminPropagate(feed.match, feed.slot, team, FLAGS[team] || '🏳️');
+}
+
+function adminPropagate(matchId, slot, team, flag) {
+  const matchMap = allMatches();
+  const m = matchMap[matchId];
+  if (!m) return;
+  if (slot === 1) { m.team1 = team; m.flag1 = flag; }
+  else            { m.team2 = team; m.flag2 = flag; }
+
+  // Re-render row inside modal
+  const existing = document.getElementById(`admin-match-row-${matchId}`);
+  if (existing) {
+    const isTbd1 = !m.team1 || m.team1.startsWith('TBD') || m.team1.startsWith('W ');
+    const isTbd2 = !m.team2 || m.team2.startsWith('TBD') || m.team2.startsWith('W ');
+    const f1 = FLAGS[m.team1] || m.flag1 || '🏳️';
+    const f2 = FLAGS[m.team2] || m.flag2 || '🏳️';
+    existing.innerHTML = `
+      <span class="match-num">${m.date}</span>
+      <button class="team-btn ${isTbd1?'tbd':''} ${adminEditPicks_picks[matchId]===m.team1&&!isTbd1?'selected':''}"
+        onclick="${isTbd1?'':` adminPickTeam('${matchId}', 1)`}" id="admin-btn-${matchId}-1">
+        <span class="flag">${f1}</span> ${isTbd1?(m.team1||'TBD'):m.team1}
+      </button>
+      <span class="vs-divider">vs</span>
+      <button class="team-btn ${isTbd2?'tbd':''} ${adminEditPicks_picks[matchId]===m.team2&&!isTbd2?'selected':''}"
+        onclick="${isTbd2?'':` adminPickTeam('${matchId}', 2)`}" id="admin-btn-${matchId}-2">
+        <span class="flag">${f2}</span> ${isTbd2?(m.team2||'TBD'):m.team2}
+      </button>
+    `;
+  }
+
+  if (adminEditPicks_picks[matchId]) {
+    const pick = adminEditPicks_picks[matchId];
+    if (pick !== m.team1 && pick !== m.team2) {
+      delete adminEditPicks_picks[matchId];
+      adminClearDownstream(matchId, pick);
+    } else {
+      const feed = FEEDS_INTO[matchId];
+      if (feed) adminPropagate(feed.match, feed.slot, pick, FLAGS[pick] || '🏳️');
+    }
+  }
+}
+
+function adminClearDownstream(matchId, clearedTeam) {
+  const feed = FEEDS_INTO[matchId];
+  if (!feed) return;
+  const matchMap = allMatches();
+  const nextMatch = matchMap[feed.match];
+  if (!nextMatch) return;
+  const placeholder = `W ${matchId.replace('_','-').toUpperCase()}`;
+  if (feed.slot === 1) { nextMatch.team1 = placeholder; nextMatch.flag1 = '🏳️'; }
+  else                 { nextMatch.team2 = placeholder; nextMatch.flag2 = '🏳️'; }
+  if (adminEditPicks_picks[feed.match] === clearedTeam) {
+    delete adminEditPicks_picks[feed.match];
+    adminClearDownstream(feed.match, clearedTeam);
+  }
+  const existing = document.getElementById(`admin-match-row-${feed.match}`);
+  if (existing) {
+    const m = nextMatch;
+    const isTbd1 = !m.team1 || m.team1.startsWith('TBD') || m.team1.startsWith('W ');
+    const isTbd2 = !m.team2 || m.team2.startsWith('TBD') || m.team2.startsWith('W ');
+    const f1 = FLAGS[m.team1] || m.flag1 || '🏳️';
+    const f2 = FLAGS[m.team2] || m.flag2 || '🏳️';
+    existing.innerHTML = `
+      <span class="match-num">${m.date}</span>
+      <button class="team-btn ${isTbd1?'tbd':''} ${adminEditPicks_picks[m.id]===m.team1&&!isTbd1?'selected':''}"
+        onclick="${isTbd1?'':` adminPickTeam('${m.id}', 1)`}" id="admin-btn-${m.id}-1">
+        <span class="flag">${f1}</span> ${isTbd1?(m.team1||'TBD'):m.team1}
+      </button>
+      <span class="vs-divider">vs</span>
+      <button class="team-btn ${isTbd2?'tbd':''} ${adminEditPicks_picks[m.id]===m.team2&&!isTbd2?'selected':''}"
+        onclick="${isTbd2?'':` adminPickTeam('${m.id}', 2)`}" id="admin-btn-${m.id}-2">
+        <span class="flag">${f2}</span> ${isTbd2?(m.team2||'TBD'):m.team2}
+      </button>
+    `;
+  }
+}
+
+async function adminSavePicks() {
+  const id = adminEditPicks_participantId;
+  if (!id) return;
+  const bracketRows = Object.entries(adminEditPicks_picks).map(([match_id, picked_team]) => ({
+    participant_id: id,
+    round: match_id.split('_')[0],
+    match_id,
+    picked_team
+  }));
+  try {
+    await sb(`brackets?participant_id=eq.${id}`, { method: 'DELETE' });
+    if (bracketRows.length > 0) await sbPost('brackets', bracketRows);
+    toast('Picks saved ✓');
+    document.getElementById('confirm-modal')?.remove();
+    loadAdminParticipants();
+  } catch(e) {
+    toast('Error saving: ' + e.message, true);
   }
 }
 
