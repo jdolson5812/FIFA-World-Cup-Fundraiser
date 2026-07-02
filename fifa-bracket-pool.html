@@ -605,11 +605,11 @@
     <div class="card" style="margin-top:8px;">
       <h2>Tiebreaker</h2>
       <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">
-        How many total corners will be taken across all Round of 16 games combined?
+        How many total corners will be taken in the Knockout Rounds (not including the 3rd place match)?
         <strong style="color:var(--text)">(Finals tiebreaker only — does not count toward your score)</strong>
       </p>
       <div class="form-group" style="margin-bottom:0;">
-        <label>Total Corners in Round of 16</label>
+        <label>Total Corners in Knockout Rounds</label>
         <input type="number" id="reg-tiebreaker" placeholder="e.g. 72" min="0" max="300"
           style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:0.95rem;">
       </div>
@@ -1259,7 +1259,7 @@ async function submitBracket() {
   // Validate tiebreaker
   const tiebreakerVal = document.getElementById('reg-tiebreaker').value.trim();
   if (!tiebreakerVal || isNaN(tiebreakerVal) || parseInt(tiebreakerVal) < 0) {
-    toast('Please enter your tiebreaker guess (total corners in Round of 16)', true);
+    toast('Please enter your tiebreaker guess (total corners in Knockout Rounds)', true);
     return;
   }
   const tiebreaker = parseInt(tiebreakerVal);
@@ -1742,7 +1742,7 @@ function renderPickDetail(myPicks, resultMap, tiebreaker) {
   if (tiebreaker != null) {
     const tb = document.createElement('div');
     tb.style.cssText = 'margin-top:10px;font-size:0.78rem;color:var(--muted);text-align:right;padding-right:8px;';
-    tb.innerHTML = `Tiebreaker (R16 corners): <strong style="color:var(--text)">${tiebreaker}</strong>`;
+    tb.innerHTML = `Tiebreaker (Knockout Round corners): <strong style="color:var(--text)">${tiebreaker}</strong>`;
     wrap.appendChild(tb);
   }
 
