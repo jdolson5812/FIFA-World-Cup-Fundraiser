@@ -567,7 +567,7 @@
       Pick the winner of every game from the Round of 16 through the Final.
       More points are awarded for correct picks in later rounds.
       Entry fee is <strong style="color:var(--text)">$25</strong> — pay Jeff on Venmo or donate directly to the Reeve Foundation below.
-      <strong style="color:var(--red)">Since the Round of 16 bracket will not be fully set until the night of July 3rd, you can make edits to your bracket until brackets lock on July 4th at 1:00 PM ET.</strong><br><br>
+      <strong style="color:var(--red)">Picks for the 2 games played on July 4th, and the July 9th quarterfinal between their winners, lock Saturday July 4 at 1:00 PM ET*. All remaining picks lock Sunday July 5 at 4:00 PM ET.</strong><br><br>
       <strong style="color:var(--text)">Prize pool:</strong> 50% to the winner · 50% donated to the Christopher &amp; Dana Reeve Foundation.
     </p>
     <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;">
@@ -620,7 +620,7 @@
         Submit My Bracket
       </button>
       <p style="font-size:0.78rem;color:var(--muted);margin-top:8px;">
-        You can update your picks until brackets lock on July 4 at 1:00 PM ET.
+        You can update your picks until they lock — Jul 4 games lock Sat July 4 at 1:00 PM ET, all other picks lock Sun July 5 at 4:00 PM ET.
       </p>
     </div>
   </div>
@@ -753,7 +753,11 @@ const SUPABASE_URL = 'https://nfcejzkorlrthazhfjxw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mY2VqemtvcmxydGhhemhmanh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NTMwNTQsImV4cCI6MjA5ODQyOTA1NH0.VkVmledFs_f1G5KXkEK0AthiaqPa_53VPPHstRNuwBQ';
 const ENTRY_FEE = 25;
 const ADMIN_PASSWORD = 'reeve2026';
-const BRACKET_LOCK_DATE = new Date('2026-07-04T13:00:00-04:00'); // First R16 kickoff ~1pm ET
+const LOCK_DATE_SAT = new Date('2026-07-04T13:00:00-04:00'); // Jul 4 games + QF-1 lock at 1pm ET
+const LOCK_DATE_SUN = new Date('2026-07-05T16:00:00-04:00'); // All other games lock Sun Jul 5 4pm ET
+
+// Matches that lock on Saturday (Jul 4 games + QF-1 which depends on them)
+const SAT_LOCK_MATCHES = new Set(['r16_1','r16_2','qf_1']);
 
 // ══════════════════════════════════════════════════════
 // MATCH DATA
@@ -762,8 +766,8 @@ const BRACKET_LOCK_DATE = new Date('2026-07-04T13:00:00-04:00'); // First R16 ki
 // ══════════════════════════════════════════════════════
 const MATCHES = {
   r16: [
-    { id:'r16_1', team1:'Paraguay',  team2:'France',   flag1:'🇵🇾', flag2:'🇫🇷', date:'Jul 4' },
-    { id:'r16_2', team1:'Canada',    team2:'Morocco',  flag1:'🇨🇦', flag2:'🇲🇦', date:'Jul 4' },
+    { id:'r16_1', team1:'Paraguay',  team2:'France',   flag1:'🇵🇾', flag2:'🇫🇷', date:'Jul 4*' },
+    { id:'r16_2', team1:'Canada',    team2:'Morocco',  flag1:'🇨🇦', flag2:'🇲🇦', date:'Jul 4*' },
     { id:'r16_3', team1:'W Portugal/Croatia', team2:'W Spain/Austria',      flag1:'🏳️', flag2:'🏳️', date:'Jul 6' },
     { id:'r16_4', team1:'United States', team2:'Belgium', flag1:'🇺🇸', flag2:'🇧🇪', date:'Jul 6' },
     { id:'r16_5', team1:'Brazil',    team2:'Norway',   flag1:'🇧🇷', flag2:'🇳🇴', date:'Jul 5' },
@@ -772,7 +776,7 @@ const MATCHES = {
     { id:'r16_8', team1:'W Switzerland/Algeria', team2:'W Colombia/Ghana',   flag1:'🏳️', flag2:'🏳️', date:'Jul 7' },
   ],
   qf: [
-    { id:'qf_1', team1:'W R16-1', team2:'W R16-2', flag1:'🏳️', flag2:'🏳️', date:'Jul 9' },
+    { id:'qf_1', team1:'W R16-1', team2:'W R16-2', flag1:'🏳️', flag2:'🏳️', date:'Jul 9*' },
     { id:'qf_2', team1:'W R16-3', team2:'W R16-4', flag1:'🏳️', flag2:'🏳️', date:'Jul 9' },
     { id:'qf_3', team1:'W R16-5', team2:'W R16-6', flag1:'🏳️', flag2:'🏳️', date:'Jul 10' },
     { id:'qf_4', team1:'W R16-7', team2:'W R16-8', flag1:'🏳️', flag2:'🏳️', date:'Jul 10' },
@@ -884,7 +888,11 @@ function allMatches() {
 let picks = {};          // { match_id: team_name }
 let currentEmail = localStorage.getItem('bracket_email') || '';
 let currentParticipantId = null;  // tracks which bracket row we're editing
-let isLocked = new Date() >= BRACKET_LOCK_DATE;
+const now = new Date();
+function isMatchLocked(matchId) {
+  return SAT_LOCK_MATCHES.has(matchId) ? now >= LOCK_DATE_SAT : now >= LOCK_DATE_SUN;
+}
+const isAllLocked = now >= LOCK_DATE_SUN; // true once everything is locked
 let adminAuthed = false;
 
 // Visual display order for bracket tree — matches ESPN natural top-to-bottom order
@@ -943,7 +951,7 @@ function renderBracketPicker() {
   const container = document.getElementById('bracket-picker');
   container.innerHTML = '';
 
-  if (isLocked) {
+  if (isAllLocked) {
     container.innerHTML = '<div class="locked-banner">🔒 Brackets are locked — the tournament has begun!</div>';
     document.getElementById('submit-btn').disabled = true;
     // Still show the bracket tree in read-only mode
@@ -1050,8 +1058,9 @@ function buildMatchCard(m, interactive, readOnly, picksObj, resultMap) {
   const disp1 = isTbd1 ? (m.team1 ? m.team1.replace(/^W /, '') : 'TBD') : m.team1;
   const disp2 = isTbd2 ? (m.team2 ? m.team2.replace(/^W /, '') : 'TBD') : m.team2;
 
+  const matchLocked = isMatchLocked(m.id);
   const card = document.createElement('div');
-  card.className = 'bracket-match' + (isLocked && !readOnly ? ' locked' : '');
+  card.className = 'bracket-match' + (matchLocked && !readOnly ? ' locked' : '');
   if (!readOnly) card.id = `match-row-${m.id}`;
 
   // Date label
@@ -1085,8 +1094,8 @@ function buildMatchCard(m, interactive, readOnly, picksObj, resultMap) {
     return result === team ? ' ✓' : ' ✗';
   }
 
-  const clickFn1 = (interactive && !isTbd1) ? () => pickTeam(m.id, 1) : null;
-  const clickFn2 = (interactive && !isTbd2) ? () => pickTeam(m.id, 2) : null;
+  const clickFn1 = (interactive && !isTbd1 && !matchLocked) ? () => pickTeam(m.id, 1) : null;
+  const clickFn2 = (interactive && !isTbd2 && !matchLocked) ? () => pickTeam(m.id, 2) : null;
 
   const btn1 = document.createElement('button');
   btn1.className = teamClass(m.team1, isTbd1, 1);
@@ -1520,7 +1529,11 @@ async function loadLiveBracket() {
 
     const lockNote = document.createElement('div');
     lockNote.style.cssText = 'font-size:0.78rem;color:var(--muted);margin-bottom:12px;text-align:right;';
-    lockNote.textContent = isLocked ? 'Brackets are locked.' : 'Brackets lock July 4 at 1:00 PM ET.';
+    lockNote.textContent = isAllLocked
+      ? 'Brackets are locked.'
+      : now >= LOCK_DATE_SAT
+        ? 'Jul 4 picks locked. Remaining picks lock July 5 at 4:00 PM ET.'
+        : 'Jul 4 picks lock July 4 at 1:00 PM ET. All other picks lock July 5 at 4:00 PM ET.';
     wrap.appendChild(lockNote);
 
     const bracketWrap = document.createElement('div');
@@ -1799,7 +1812,7 @@ async function loadMyBracket() {
         : p.name;
       headerRow.appendChild(h2);
 
-      if (!isLocked) {
+      if (!isAllLocked) {
         const editBtn = document.createElement('button');
         editBtn.className = 'btn btn-sm';
         editBtn.style.cssText = 'background:var(--border);color:var(--text);flex-shrink:0;margin-left:12px;';
