@@ -527,16 +527,15 @@
 
 <header>
   <span class="trophy">🏆</span>
-  <h1><button onclick="switchTabDirect('live')">FIFA World Cup 2026 <span>Bracket Pool</span></button></h1>
-  <p>Round of 16 · Benefiting the Christopher &amp; Dana Reeve Foundation</p>
+  <h1><button onclick="switchTabDirect('enter')">FIFA World Cup 2026 <span>Bracket Pool</span></button></h1>
+  <p>Round of 16 · 2026 TCS New York City Marathon Fundraiser</p>
   <div class="fundraiser-note">
     50% of proceeds benefit the Christopher &amp; Dana Reeve Foundation
   </div>
 </header>
 
 <nav>
-  <button class="active" onclick="switchTab('live')">Live Bracket</button>
-  <button onclick="switchTab('enter')">Enter Pool</button>
+  <button class="active" onclick="switchTab('enter')">Enter Pool</button>
   <button onclick="switchTab('leaderboard')">Leaderboard</button>
   <button onclick="switchTab('bracket')">My Bracket</button>
   <button onclick="switchTab('admin')">Admin</button>
@@ -545,7 +544,7 @@
 <!-- ══════════════════════════════════════════════════ -->
 <!-- LIVE BRACKET TAB -->
 <!-- ══════════════════════════════════════════════════ -->
-<div id="tab-live" class="page active">
+<div id="tab-live" class="page">
   <div id="live-bracket-content">
     <div class="loading"><div class="spinner"></div><br>Loading...</div>
   </div>
@@ -554,7 +553,7 @@
 <!-- ══════════════════════════════════════════════════ -->
 <!-- ENTER POOL TAB -->
 <!-- ══════════════════════════════════════════════════ -->
-<div id="tab-enter" class="page">
+<div id="tab-enter" class="page active">
 
   <div class="card">
     <h2>How It Works</h2>
@@ -568,7 +567,8 @@
       Pick the winner of every game from the Round of 16 through the Final.
       More points are awarded for correct picks in later rounds.
       Entry fee is <strong style="color:var(--text)">$25</strong> — pay Jeff on Venmo or donate directly to the Reeve Foundation below.
-      <strong style="color:var(--gold)">Brackets lock July 4 at 1:00 PM ET when the first R16 game kicks off.</strong><br><br>
+      <strong style="color:var(--gold)">Brackets lock July 4 at 1:00 PM ET when the first R16 game kicks off.</strong>
+      Since the Round of 16 bracket will not be fully set until the night of July 3rd, you can make edits to your bracket until brackets lock on July 4th at 1:00 PM ET.<br><br>
       <strong style="color:var(--text)">Prize pool:</strong> 50% to the winner · 50% donated to the Christopher &amp; Dana Reeve Foundation.
     </p>
     <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;">
